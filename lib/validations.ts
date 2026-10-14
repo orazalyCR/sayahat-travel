@@ -21,19 +21,21 @@ const tourBaseSchema = z.object({
   whatsappOverride: z.string().optional().nullable(),
 });
 
-const datesInOrder = (data: { startDate: Date; endDate: Date }) => data.endDate >= data.startDate;
 const dateOrderIssue = {
   message: "Дата окончания не может быть раньше даты начала",
-  path: ["endDate"] as const,
+  path: ["endDate"],
 };
 
 // Используется при создании тура — обязательные поля + проверка дат.
-export const tourSchema = tourBaseSchema.refine(datesInOrder, dateOrderIssue);
+export const tourSchema = tourBaseSchema.refine(
+  (data) => data.endDate >= data.startDate,
+  dateOrderIssue
+);
 
 // Используется при обновлении — все поля необязательны; проверка дат срабатывает,
 // только если в запросе присутствуют обе даты.
 export const tourUpdateSchema = tourBaseSchema.partial().refine(
-  (data) => (data.startDate && data.endDate ? datesInOrder(data as { startDate: Date; endDate: Date }) : true),
+  (data) => (data.startDate && data.endDate ? data.endDate >= data.startDate : true),
   dateOrderIssue
 );
 
