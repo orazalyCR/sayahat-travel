@@ -1,0 +1,81 @@
+// Схема базы данных турагентства.
+// Две основные таблицы: Admin (сотрудники с доступом к админ-панели) и Tour (туры).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRole {
+  OWNER
+  MANAGER
+}
+
+model Admin {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         AdminRole @default(MANAGER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tours        Tour[]
+
+  @@map("admins")
+}
+
+enum TourStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Tour {
+  id               String     @id @default(cuid())
+  slug             String     @unique
+  title            String
+  // Короткое описание для карточки на главной
+  shortDescription String
+  // Полное описание (программа тура, что включено и т.д.)
+  description      String
+
+  country          String
+  city             String?
+
+  price            Decimal    @db.Decimal(10, 2)
+  currency         String     @default("KZT")
+  // Цена "до скидки" — если задана, на карточке показывается перечёркнутой
+  oldPrice         Decimal?   @db.Decimal(10, 2)
+
+  startDate        DateTime
+  endDate          DateTime
+  durationDays     Int
+
+  // URL главного изображения (можно просто вставить ссылку на картинку)
+  imageUrl         String
+  // Доп. фотографии (галерея), необязательно
+  galleryUrls       String[]  @default([])
+
+  // Помечает тур как "Горящий" для витрины на главной
+  isHot            Boolean    @default(false)
+  status           TourStatus @default(DRAFT)
+
+  // Куда ведёт кнопка "Забронировать": если задано — ссылка на WhatsApp,
+  // иначе используется общий номер агентства с текстом по умолчанию
+  whatsappOverride String?
+
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  createdBy        Admin      @relation(fields: [createdById], references: [id])
+  createdById      String
+
+  @@index([isHot, status])
+  @@index([status, startDate])
+  @@map("tours")
+}
